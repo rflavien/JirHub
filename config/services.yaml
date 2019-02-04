@@ -37,3 +37,7 @@ services:
 
     App\Handler\JiraHandler:
         public: true
+
+    JoliCode\Slack\Api\Client:
+        factory: ['JoliCode\Slack\ClientFactory', create]
+        arguments: ['%env(SLACK_TOKEN)%']
