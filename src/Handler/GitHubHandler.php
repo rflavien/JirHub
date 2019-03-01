@@ -6,7 +6,7 @@ use App\Event\LabelsAppliedEvent;
 use App\Event\PullRequestMergedEvent;
 use App\Event\PullRequestMergeFailureEvent;
 use App\Model\PullRequest;
-use Github\Client as GitHubClient;
+use App\Model\PullRequest\PullRequestRepository;
 use JiraRestApi\Issue\Issue as JiraIssue;
 use JiraRestApi\JiraException;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -16,68 +16,28 @@ class GitHubHandler
     const CHANGES_REQUESTED = 'CHANGES_REQUESTED';
     const APPROVED          = 'APPROVED';
 
-    /** @var GitHubClient */
-    private $gitHubClient;
+    /** @var PullRequestRepository */
+    private $pullRequestRepository;
 
     /** @var JiraHandler */
     private $jiraHandler;
 
     /** @var EventDispatcherInterface $eventDispatcher */
-    protected $eventDispatcher;
+    private $eventDispatcher;
 
-    public function __construct(JiraHandler $jiraHandler, EventDispatcherInterface $eventDispatcher)
-    {
-        $this->gitHubClient = new GitHubClient();
-        $this->gitHubClient->authenticate(getenv('GITHUB_TOKEN'), null, GitHubClient::AUTH_HTTP_TOKEN);
-        $this->jiraHandler     = $jiraHandler;
-        $this->eventDispatcher = $eventDispatcher;
-    }
-
-    public static function arraysToPullRequests(array $pullRequestsData)
-    {
-        $pullRequests = [];
-
-        foreach ($pullRequestsData as $pullRequestData) {
-            $pullRequests[] = new PullRequest($pullRequestData);
-        }
-
-        return $pullRequests;
-    }
-
-    public function setReviewsOfPullRequest(PullRequest &$pullRequest)
-    {
-        $pullRequest->setReviews(array_reverse($this->getPullRequestReviews($pullRequest)));
-    }
-
-    public function getOpenPullRequests(array $filters = []): array
-    {
-        $pullRequestsData = $this->gitHubClient->api('pull_request')->all(
-            getenv('GITHUB_REPOSITORY_OWNER'),
-            getenv('GITHUB_REPOSITORY_NAME'),
-            ['state' => 'open', 'per_page' => 50] + $filters
-        );
-
-        return self::arraysToPullRequests($pullRequestsData);
-    }
-
-    public function getOpenPullRequestsWithLabel(string $label)
-    {
-        $pullRequestsData = $this->gitHubClient->api('issue')->all(
-            getenv('GITHUB_REPOSITORY_OWNER'),
-            getenv('GITHUB_REPOSITORY_NAME'),
-            [
-                'state'    => 'open',
-                'per_page' => 50,
-                'labels'   => $label,
-            ]
-        );
-
-        return self::arraysToPullRequests($pullRequestsData);
+    public function __construct(
+        PullRequestRepository $pullRequestRepository,
+        JiraHandler $jiraHandler,
+        EventDispatcherInterface $eventDispatcher
+    ) {
+        $this->pullRequestRepository = $pullRequestRepository;
+        $this->jiraHandler           = $jiraHandler;
+        $this->eventDispatcher       = $eventDispatcher;
     }
 
     public function getOpenPullRequestFromHeadBranch(string $headBranchName)
     {
-        $pullRequests = $this->getOpenPullRequests();
+        $pullRequests = $this->pullRequestRepository->getPullRequests('open');
 
         /** @var PullRequest $pullRequest */
         foreach ($pullRequests as $pullRequest) {
@@ -94,7 +54,7 @@ class GitHubHandler
 
     public function getOpenPullRequestFromJiraIssueKey(string $jiraIssueName)
     {
-        $pullRequests = $this->getOpenPullRequests();
+        $pullRequests = $this->pullRequestRepository->getPullRequests('open');
 
         /** @var PullRequest $pullRequest */
         foreach ($pullRequests as $pullRequest) {
@@ -129,58 +89,10 @@ class GitHubHandler
         }
     }
 
-    public function getPullRequest(int $pullRequestNumber): PullRequest
-    {
-        $pullRequestData = $this->gitHubClient->api('pull_request')->show(
-            getenv('GITHUB_REPOSITORY_OWNER'),
-            getenv('GITHUB_REPOSITORY_NAME'),
-            $pullRequestNumber
-        );
-
-        return new PullRequest($pullRequestData);
-    }
-
-    public function addLabelToPullRequest(string $label, PullRequest $pullRequest)
-    {
-        $this->gitHubClient->api('issue')->labels()->add(
-            getenv('GITHUB_REPOSITORY_OWNER'),
-            getenv('GITHUB_REPOSITORY_NAME'),
-            $pullRequest->getNumber(),
-            $label
-        );
-    }
-
-    public function removeLabelFromPullRequest(string $label, PullRequest $pullRequest)
-    {
-        $this->gitHubClient->api('issue')->labels()->remove(
-            getenv('GITHUB_REPOSITORY_OWNER'),
-            getenv('GITHUB_REPOSITORY_NAME'),
-            $pullRequest->getNumber(),
-            $label
-        );
-    }
-
-    public function getPullRequestReviews(PullRequest $pullRequest)
-    {
-        return $this->gitHubClient->api('pull_request')->reviews()->all(
-            getenv('GITHUB_REPOSITORY_OWNER'),
-            getenv('GITHUB_REPOSITORY_NAME'),
-            $pullRequest->getNumber(),
-            ['per_page' => 50]
-        );
-    }
-
     public function mergePullRequest(PullRequest $pullRequest, string $mergeMethod = 'merge')
     {
         try {
-            $this->gitHubClient->api('pull_request')->merge(
-                getenv('GITHUB_REPOSITORY_OWNER'),
-                getenv('GITHUB_REPOSITORY_NAME'),
-                $pullRequest->getNumber(),
-                $pullRequest->getTitle(),
-                $pullRequest->getHeadSha(),
-                $mergeMethod
-            );
+            $this->pullRequestRepository->mergePullRequest($pullRequest, $mergeMethod);
         } catch (\Exception $e) {
             $this->eventDispatcher->dispatch(PullRequestMergeFailureEvent::NAME, new PullRequestMergeFailureEvent($pullRequest, $e->getMessage()));
         }
@@ -199,10 +111,6 @@ class GitHubHandler
 
     public function isPullRequestApproved(PullRequest $pullRequest): bool
     {
-        if (empty($pullRequest->getReviews())) {
-            $this->setReviewsOfPullRequest($pullRequest);
-        }
-
         $approveCount = 0;
 
         foreach ($pullRequest->getReviews() as $review) {
@@ -232,14 +140,21 @@ class GitHubHandler
 
     public function isReviewBranchAvailable(string $reviewBranchName, PullRequest $pullRequest)
     {
-        $pullRequests = $this->getOpenPullRequestsWithLabel(getenv('GITHUB_REVIEW_ENVIRONMENT_PREFIX') . $reviewBranchName);
+        $pullRequests = $this->pullRequestRepository->getPullRequests(
+            'open',
+            getenv('GITHUB_REVIEW_ENVIRONMENT_PREFIX') . $reviewBranchName
+        );
 
         return 0 === \count($pullRequests)
             || (1 === \count($pullRequests) && $pullRequests[0]->getNumber() === $pullRequest->getNumber());
     }
 
-    public function checkDeployability(string $headBranchName, string $reviewBranchName, ?PullRequest $pullRequest = null, bool $force = false)
-    {
+    public function checkDeployability(
+        string $headBranchName,
+        string $reviewBranchName,
+        ?PullRequest $pullRequest = null,
+        bool $force = false
+    ) {
         if ($headBranchName === getenv('GITHUB_DEFAULT_BASE_BRANCH')) {
             return 'OK';
         }
@@ -416,24 +331,12 @@ class GitHubHandler
         }
     }
 
-    public function updatePullRequestBody(PullRequest $pullRequest, string $body)
-    {
-        $pullRequestData = $this->gitHubClient->api('pull_request')->update(
-            getenv('GITHUB_REPOSITORY_OWNER'),
-            getenv('GITHUB_REPOSITORY_NAME'),
-            $pullRequest->getNumber(),
-            ['body' => $body]
-        );
-
-        return new PullRequest($pullRequestData);
-    }
-
     /**
      * @throws JiraException
      */
     public function synchronize()
     {
-        $pullRequests = $this->getOpenPullRequests();
+        $pullRequests = $this->pullRequestRepository->getPullRequests('open');
 
         /** @var PullRequest $pullRequest */
         foreach ($pullRequests as $pullRequest) {
