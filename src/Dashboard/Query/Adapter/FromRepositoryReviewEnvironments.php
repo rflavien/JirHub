@@ -3,17 +3,18 @@
 namespace App\Dashboard\Query\Adapter;
 
 use App\Dashboard\Query\ReviewEnvironments;
-use App\Handler\GitHubHandler;
+use App\Model\PullRequest;
+use App\Model\PullRequest\PullRequestRepository;
 use App\Model\ReviewEnvironment;
 
-class FromGitHubHandlerReviewEnvironments implements ReviewEnvironments
+class FromRepositoryReviewEnvironments implements ReviewEnvironments
 {
-    /** @var GitHubHandler */
-    protected $handler;
+    /** @var PullRequestRepository */
+    protected $repository;
 
-    public function __construct(GitHubHandler $handler)
+    public function __construct(PullRequestRepository $repository)
     {
-        $this->handler = $handler;
+        $this->repository = $repository;
     }
 
     public function fetch(): array
@@ -26,7 +27,7 @@ class FromGitHubHandlerReviewEnvironments implements ReviewEnvironments
         ];
 
         foreach ($environments as $environment) {
-            $pullRequestsOnEnvironment = $this->handler->getOpenPullRequestsWithLabel('~validation-' . $environment->getName());
+            $pullRequestsOnEnvironment = $this->repository->getPullRequests(PullRequest::STATE_OPEN, ['~validation-' . $environment->getName()]);
 
             if (!empty($pullRequestsOnEnvironment)) {
                 $environment->setPullRequest($pullRequestsOnEnvironment[0]);

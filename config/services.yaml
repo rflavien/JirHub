@@ -42,8 +42,6 @@ services:
         factory: ['JoliCode\Slack\ClientFactory', create]
         arguments: ['%env(SLACK_TOKEN)%']
 
-    App\Dashboard\Query\ReviewEnvironments: '@App\Dashboard\Query\Adapter\FromGitHubHandlerReviewEnvironments'
-    App\Dashboard\Query\PullRequestsToDeploy: '@App\Dashboard\Query\Adapter\FromGitHubHandlerPullRequestsToDeploy'
-    App\Dashboard\Query\PullRequestsToMergeOnDev: '@App\Dashboard\Query\Adapter\FromGitHubHandlerPullRequestsToMergeOnDev'
+    App\Dashboard\Query\ReviewEnvironments: '@App\Dashboard\Query\Adapter\FromRepositoryReviewEnvironments'
 
     App\Model\PullRequest\PullRequestRepository: '@App\Model\PullRequest\Adapter\KnpLabsPullRequestRepository'
