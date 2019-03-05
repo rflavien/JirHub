@@ -4,6 +4,8 @@ namespace App\Model;
 
 class PullRequest
 {
+    const STATE_OPEN = 'open';
+
     /** @var int $number */
     private $number;
 
