@@ -3,8 +3,8 @@
 namespace App\Dashboard\Handler;
 
 use App\Dashboard\Query\ReviewEnvironments;
-use App\Model\PullRequest;
-use App\Model\PullRequest\PullRequestRepository;
+use App\Model\PullRequest\PullRequest;
+use App\Model\PullRequest\Repository\PullRequestRepository;
 
 class DashboardHandler
 {

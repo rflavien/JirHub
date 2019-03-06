@@ -5,8 +5,8 @@ namespace App\Handler;
 use App\Event\LabelsAppliedEvent;
 use App\Event\PullRequestMergedEvent;
 use App\Event\PullRequestMergeFailureEvent;
-use App\Model\PullRequest;
-use App\Model\PullRequest\PullRequestRepository;
+use App\Model\PullRequest\PullRequest;
+use App\Model\PullRequest\Repository\PullRequestRepository;
 use JiraRestApi\Issue\Issue as JiraIssue;
 use JiraRestApi\JiraException;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -22,7 +22,7 @@ class GitHubHandler
     /** @var JiraHandler */
     private $jiraHandler;
 
-    /** @var EventDispatcherInterface $eventDispatcher */
+    /** @var EventDispatcherInterface */
     private $eventDispatcher;
 
     public function __construct(

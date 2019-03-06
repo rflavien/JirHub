@@ -1,9 +1,8 @@
 <?php
 
-namespace App\Model\PullRequest\PullRequestRepository;
+namespace App\Model\PullRequest\Repository;
 
-use App\Model\PullRequest;
-use App\Model\PullRequest\PullRequestRepository;
+use App\Model\PullRequest\PullRequest;
 use Github\Client as KnpLabsGitHubClient;
 
 class KnpLabsPullRequestRepository implements PullRequestRepository

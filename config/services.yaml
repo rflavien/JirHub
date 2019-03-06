@@ -44,4 +44,4 @@ services:
 
     App\Dashboard\Query\ReviewEnvironments: '@App\Dashboard\Query\Adapter\FromRepositoryReviewEnvironments'
 
-    App\Model\PullRequest\PullRequestRepository: '@App\Model\PullRequest\Adapter\KnpLabsPullRequestRepository'
+    App\Model\PullRequest\Repository\PullRequestRepository: '@App\Model\PullRequest\Repository\KnpLabsPullRequestRepository'

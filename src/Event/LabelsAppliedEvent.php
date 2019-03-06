@@ -2,7 +2,7 @@
 
 namespace App\Event;
 
-use App\Model\PullRequest;
+use App\Model\PullRequest\PullRequest;
 use Symfony\Component\EventDispatcher\Event;
 
 class LabelsAppliedEvent extends Event

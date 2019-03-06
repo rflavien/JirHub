@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Model\PullRequest;
+namespace App\Model\PullRequest\Repository;
 
-use App\Model\PullRequest;
+use App\Model\PullRequest\PullRequest;
 
 interface PullRequestRepository
 {
