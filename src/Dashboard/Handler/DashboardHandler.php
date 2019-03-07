@@ -25,7 +25,7 @@ class DashboardHandler
         PullRequestRepository $repository
     ) {
         $this->reviewEnvironments = $reviewEnvironments;
-        $this->repository = $repository;
+        $this->repository         = $repository;
     }
 
     public function getData()
@@ -33,7 +33,7 @@ class DashboardHandler
         return [
             self::REVIEW_ENVIRONMENTS          => $this->reviewEnvironments->fetch(),
             self::PULL_REQUEST_TO_DEPLOY       => $this->repository->getPullRequests(PullRequest::STATE_OPEN, ['~validation-required']),
-            self::PULL_REQUEST_TO_MERGE_ON_DEV => $this->repository->getPullRequests(PullRequest::STATE_OPEN, ['~validated'])
+            self::PULL_REQUEST_TO_MERGE_ON_DEV => $this->repository->getPullRequests(PullRequest::STATE_OPEN, ['~validated']),
         ];
     }
 }

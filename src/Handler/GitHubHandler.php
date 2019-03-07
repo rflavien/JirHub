@@ -142,7 +142,7 @@ class GitHubHandler
     {
         $pullRequests = $this->pullRequestRepository->getPullRequests(
             'open',
-            getenv('GITHUB_REVIEW_ENVIRONMENT_PREFIX') . $reviewBranchName
+            [getenv('GITHUB_REVIEW_ENVIRONMENT_PREFIX') . $reviewBranchName]
         );
 
         return 0 === \count($pullRequests)
@@ -212,7 +212,7 @@ class GitHubHandler
 
         foreach ($reviewLabels as $reviewLabel) {
             if ($this->hasLabel($pullRequest, $reviewLabel)) {
-                $this->removeLabelFromPullRequest($reviewLabel, $pullRequest);
+                $this->pullRequestRepository->removeLabelFromPullRequest($pullRequest, $reviewLabel);
             }
         }
     }
@@ -252,7 +252,7 @@ class GitHubHandler
         }
 
         $this->removeReviewLabels($pullRequest);
-        $this->addLabelToPullRequest(getenv('GITHUB_REVIEW_ENVIRONMENT_PREFIX') . $reviewBranchName, $pullRequest);
+        $this->pullRequestRepository->addLabelToPullRequest($pullRequest, getenv('GITHUB_REVIEW_ENVIRONMENT_PREFIX') . $reviewBranchName);
 
         $jiraIssueKey = JiraHandler::extractIssueKeyFromString($headBranchName)
             ?? JiraHandler::extractIssueKeyFromString($pullRequest->getTitle());
@@ -283,7 +283,7 @@ class GitHubHandler
                 || $this->isValidated($pullRequest)
             )
         ) {
-            $this->removeLabelFromPullRequest(getenv('GITHUB_REVIEW_REQUIRED_LABEL'), $pullRequest);
+            $this->pullRequestRepository->removeLabelFromPullRequest($pullRequest, getenv('GITHUB_REVIEW_REQUIRED_LABEL'));
         }
 
         if (
@@ -293,7 +293,7 @@ class GitHubHandler
             && !$this->isDeployed($pullRequest)
             && !$this->isValidated($pullRequest)
         ) {
-            $this->addLabelToPullRequest(getenv('GITHUB_REVIEW_REQUIRED_LABEL'), $pullRequest);
+            $this->pullRequestRepository->addLabelToPullRequest($pullRequest, getenv('GITHUB_REVIEW_REQUIRED_LABEL'));
 
             if ($jiraIssue->fields->status->name !== getenv('JIRA_STATUS_TO_VALIDATE')) {
                 $this->jiraHandler->transitionIssueTo($jiraIssue->key, getenv('JIRA_TRANSITION_ID_TO_VALIDATE'));
@@ -326,8 +326,8 @@ class GitHubHandler
         $pullRequestBody = $pullRequest->getBody();
         $jiraIssueUrl    = JiraHandler::buildIssueUrlFromIssueName($jiraIssue->key);
 
-        if (false === \strpos($pullRequestBody, $jiraIssueUrl)) {
-            $this->updatePullRequestBody($pullRequest, $jiraIssueUrl . "\n\n" . $pullRequestBody);
+        if (false === strpos($pullRequestBody, $jiraIssueUrl)) {
+            $this->pullRequestRepository->updatePullRequestBody($pullRequest, $jiraIssueUrl . "\n\n" . $pullRequestBody);
         }
     }
 

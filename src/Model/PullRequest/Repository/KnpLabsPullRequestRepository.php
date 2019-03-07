@@ -86,15 +86,16 @@ class KnpLabsPullRequestRepository implements PullRequestRepository
         return $pullRequest->removeLabel($label);
     }
 
-    public function mergePullRequest(PullRequest $pullRequest, string $mergeMethod = 'merge'): void
+    public function mergePullRequest(PullRequest $pullRequest, string $mergeMethod = 'squash'): void
     {
         $this->client->api('pull_request')->merge(
             getenv('GITHUB_REPOSITORY_OWNER'),
             getenv('GITHUB_REPOSITORY_NAME'),
             $pullRequest->getNumber(),
-            $pullRequest->getTitle(),
+            'Merged by JirHub',
             $pullRequest->getHeadSha(),
-            $mergeMethod
+            $mergeMethod,
+            $pullRequest->getTitle()
         );
     }
 
