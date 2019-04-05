@@ -2,6 +2,8 @@
 
 namespace App\Model;
 
+use App\Model\PullRequest\PullRequest;
+
 class ReviewEnvironment
 {
     /** @var string $name */
