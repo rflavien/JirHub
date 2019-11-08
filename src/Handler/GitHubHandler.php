@@ -327,21 +327,24 @@ class GitHubHandler
         $title = $pullRequest->getTitle();
 
         $regexPattern = '/^\[?%s\]?/i';
+        $betterPrTitle = null;
 
         if ($pullRequest->hasLabel('Tech') && 0 === preg_match(sprintf($regexPattern, 'Tech'), $title)) {
-            $title = '[Tech] ' . $pullRequest->getTitle();
+            $betterPrTitle = '[Tech] ' . $title;
         } elseif ($pullRequest->hasLabel('Bug') && 0 === preg_match(sprintf($regexPattern, 'Fix'), $title)) {
-            $title = '[Fix] ' . $pullRequest->getTitle();
+            $betterPrTitle = '[Fix] ' . $title;
         }
 
-        $pullRequestData = $this->gitHubClient->pullRequests()->update(
-            getenv('GITHUB_REPOSITORY_OWNER'),
-            getenv('GITHUB_REPOSITORY_NAME'),
-            $pullRequest->getId(),
-            ['title' => $title]
-        );
+        if (null !== $betterPrTitle) {
+            $pullRequestData = $this->gitHubClient->pullRequests()->update(
+                getenv('GITHUB_REPOSITORY_OWNER'),
+                getenv('GITHUB_REPOSITORY_NAME'),
+                $pullRequest->getId(),
+                ['title' => $betterPrTitle]
+            );
 
-        return PullRequestFactory::fromArray($pullRequestData);
+            return PullRequestFactory::fromArray($pullRequestData);
+        }
     }
 
     public function updatePullRequestBody(PullRequest $pullRequest, string $body)
